@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import type { WeatherData, CityData, HourlyForecastItem, SevenDayForecastItem, Weekday } from '../extras/types.ts'
 import { WeatherDescription } from '../extras/types.ts'
 
-import { faSun, faCloud, faWind, faCloudSun, faCloudRain, faCloudBolt, faSnowflake, faMap, faCog, faBook} from '@fortawesome/free-solid-svg-icons'
+import { faSun,faCaretDown, faCaretUp, faCloud, faWind, faCloudSun, faCloudRain, faCloudBolt, faSnowflake, faMap, faCog, faBook} from '@fortawesome/free-solid-svg-icons'
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
@@ -51,7 +51,10 @@ export default function Home() {
   }
 
   function weekdayFromDate(date: string): Weekday {
-    return 'Friday'
+    const day = new Date(date).getDay()
+    const days: Weekday[] = [ 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday' ]
+
+    return days[day]
   }
 
   function wmoToDescription(wmo: number): WeatherDescription {
@@ -129,15 +132,15 @@ export default function Home() {
       hourly.push({
         time: parseInt(data.hourly.time[i].split('T')[1].split(':')[0]),
         description: wmoToDescription(data.hourly.weather_code[i]),
-        temperature: data.hourly.temperature_2m[i]
+        temperature: Math.floor(data.hourly.temperature_2m[i])
       })
     }
 
     for (let i = 0; i < 7; i++) {
       daily.push({
         temperature: {
-          high: data.daily.temperature_2m_max[i],
-          low: data.daily.temperature_2m_min[i]
+          high: Math.floor(data.daily.temperature_2m_max[i]),
+          low: Math.floor(data.daily.temperature_2m_min[i])
         },
         weekday: weekdayFromDate(data.daily.time[i]),
         description: wmoToDescription(data.daily.weather_code[i])
@@ -146,10 +149,10 @@ export default function Home() {
 
     setWeatherData({
       current: {
-        rainChance: data.current.precipitation * 100,
+        rainChance: Math.floor(data.current.precipitation * 100),
         windSpeed: data.current.wind_speed_10m,
         uvIndex,
-        temperature: data.current.temperature_2m,
+        temperature: Math.floor(data.current.temperature_2m),
         description: wmoToDescription(data.current.weather_code),
         relativeHumidity: data.current.relative_humidity_2m
       },
@@ -196,8 +199,9 @@ export default function Home() {
       }
 
       const { town, state, country } = (await res.json()).address
+      const cdata: CityData = { town, state, country, location: [ latitude, longitude ] }
       
-      setCity({ town, state, country, location: [ latitude, longitude ] })
+      setCity(cdata)
       setMetric(country != 'United States')
     }
 
@@ -205,8 +209,8 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    
-  }, [])
+    fetchWeather()
+  }, [ city ])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -223,7 +227,7 @@ export default function Home() {
       <div className='flex flex-col gap-3 min-h-screen justify-between w-[8%] py-10 rounded-xl bg-slate-700'>
         <div className='flex flex-col items-center gap-3 justify-start h-full'>
           <Link href='/' className='flex flex-col items-center'><FontAwesomeIcon icon={faCloud} className='text-2xl text-slate-300' /><p>Weather</p></Link>
-          <Link href='/Map' className='flex flex-col items-center'><FontAwesomeIcon icon={faMap} className='text-2xl text-slate-300' /><p>Map</p></Link>
+          <Link href='/map' className='flex flex-col items-center'><FontAwesomeIcon icon={faMap} className='text-2xl text-slate-300' /><p>Map</p></Link>
           <Link href='/info' className='flex flex-col items-center'><FontAwesomeIcon icon={faBook} className='text-2xl text-slate-300' /><p>Info</p></Link>
         </div>
         <div className='flex flex-col items-center justify-end h-full'>
@@ -234,39 +238,39 @@ export default function Home() {
       {/* Left */}
       <div className='flex flex-col gap-3 min-h-screen w-full'>
         {/* Search bar */}
-          <form onSubmit={handleSubmit}>
-            <input type='text' placeholder='Enter city name' className='bg-slate-700 rounded-xl p-2 w-full placeholder-slate-500' onChange={handleCityNameChange} />
-          </form>
+        <form onSubmit={handleSubmit}>
+          <input type='text' placeholder='Enter city name' className='bg-slate-700 rounded-xl p-2 w-full placeholder-slate-500' onChange={handleCityNameChange} />
+        </form>
         
-      
         {/* Main content */}
-        <div className='flex flex-col rounded-xl mt-3 p-5 h-full bg-linear-to-t from-blue-500 to-blue-400'>
-          <div className='flex flex-row gap-5 justify-start '>
-            <div className='flex justify-between flex-col h-full w-full gap-5'>
-              <div>
-                <h1 className='text-3xl font-bold text-slate-300'>{!loading ? `${city?.town}, ${city?.state}` : 'Loading...'}</h1>
-                <p className='text-slate-400'>Chance of Rain: {!loading ? `${weatherData.current.rainChance}%` : 'Loading...'}</p>
-              </div>
-
-              <div>
-                <h1 className='text-6xl font-bold text-slate-300'>{!loading ? `${weatherData.current.temperature}°${metric ? 'C' : 'F'}` : 'Loading...'}</h1>
-              </div>
+        <div className='flex justify-center rounded-xl mt-3 p-5 h-full bg-linear-to-t from-blue-500 to-blue-400'>
+          <div className='flex justify-center items-center '>
+            <div>
+              <p className='text-9xl font-bold'>⛅</p>
             </div>
-
-            <div className='flex items-center justify-center h-full'>
-              <h1 className='text-9xl font-bold text-slate-300'>{weatherDescriptionToEmoji(weatherData.current.description)}</h1>
+            <div>
+              <p className='text-2xl font-bold text-slate-300'>{!loading ? `${city?.town}, ${city?.state}` : 'Loading...'}</p>
+              <p className='text-6xl font-bold'>
+                {!loading ? `${weatherData.current.temperature}°${metric ? 'C' : 'F'}` : 'Loading...'}
+                <span className='text-2xl font-bold text-stone-300'>
+                  <FontAwesomeIcon icon={faCaretUp}/>
+                  {!loading ? `${weatherData.daily[0].temperature.high}°${metric ? 'C' : 'F'}` : 'Loading...'} /
+                  <FontAwesomeIcon icon={faCaretDown}/>
+                  {!loading ? `${weatherData.daily[0].temperature.low}°${metric ? 'C' : 'F'}` : 'Loading...'}
+                </span>
+              </p>
+              <p className='text-2xl text-slate-300 font-bold'>Rain Chance: {!loading ? `${weatherData.current.rainChance}%` : 'Loading...'}</p>
             </div>
           </div>
-          
         </div> 
 
         {/* Todays Forecast */}
         <div className='flex flex-row rounded-xl bg-slate-700 p-5 gap-3 h-2/3 min-h-50 w-full'>
-          {!loading ? weatherData.hourly.map((itm, i) => <div key={i} className='h-full w-full flex-col items-center justify-between py-5 flex bg-slate-600 rounded-xl hover:bg-slate-500 hover:w-[125%] transition-all'>
-            <p className='font-bold text-md text-slate-400'>{itm.time}:00</p>
+          {!loading ? weatherData.hourly.map((itm, i) => <div key={i} className={`h-full w-full flex-col items-center justify-between py-5 flex rounded-xl hover:bg-slate-500 hover:w-[125%] transition-all ${i == 0 ? 'bg-linear-to-t from-blue-500 to-blue-400' : 'bg-slate-600'}`}>
+            <p className={`font-bold text-md ${i == 0 ? 'text-slate-300' : 'text-slate-400'}`}>{itm.time}:00</p>
             <p className='text-5xl'>{weatherDescriptionToEmoji(itm.description)}</p>
-            <p className='text-2xl'>{Math.floor(itm.temperature)}°{metric ? 'C' : 'F'}</p>
-            <p className='font-bold text-2xl text-slate-300'>{weatherDescriptionToString(itm.description)}</p>
+            <p className='text-2xl font-bold'>{itm.temperature}°{metric ? 'C' : 'F'}</p>
+            <p className='text-2xl text-slate-300'>{weatherDescriptionToString(itm.description)}</p>
           </div>) : 'Loading...'}
         </div>
 
@@ -297,7 +301,9 @@ export default function Home() {
       {/* Right */}
       <div className='flex flex-col rounded-xl bg-slate-700 h-screen w-full md:w-[60%]'>
         {/* Weekly Forecast */}
-        
+        {weatherData.daily.map((itm, i) => <div key={i}>
+          {itm.weekday} // {weatherDescriptionToString(itm.description)} // {itm.temperature.high}-{itm.temperature.low}
+        </div>)}
       </div>
     </div>
   )
